@@ -7,7 +7,7 @@ status, timing, and any error, so the dashboard can show pipeline health.
 
 Run a single file manually::
 
-    python -m gideon.boss inbox/my_data.csv
+    python -m boss inbox/my_data.csv
 """
 from __future__ import annotations
 
@@ -17,8 +17,8 @@ import time
 import traceback
 from pathlib import Path
 
-from gideon import config
-from gideon.agents import (
+import config
+from agents import (
     cleaner,
     dashboard_gen,
     deployer,
@@ -127,7 +127,7 @@ def _archive_csv(csv_path: Path) -> None:
 def main(argv: list[str] | None = None) -> int:
     argv = argv if argv is not None else sys.argv[1:]
     if not argv:
-        print("usage: python -m gideon.boss <path/to.csv>", file=sys.stderr)
+        print("usage: python -m boss <path/to.csv>", file=sys.stderr)
         return 2
     manifest = run_pipeline(argv[0])
     return 0 if manifest["status"] == "success" else 1

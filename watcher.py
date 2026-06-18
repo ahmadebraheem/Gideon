@@ -9,7 +9,7 @@ Design notes:
 
 Run::
 
-    python -m gideon.watcher
+    python -m watcher
 """
 from __future__ import annotations
 
@@ -22,7 +22,8 @@ from pathlib import Path
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
 
-from gideon import config, boss
+import config
+import boss
 
 log = config.get_logger("watcher")
 

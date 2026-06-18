@@ -18,7 +18,7 @@ import numpy as np
 import pandas as pd
 from sklearn import metrics as skm
 
-from gideon import config
+import config
 
 log = config.get_logger("evaluator")
 

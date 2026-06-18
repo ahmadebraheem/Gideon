@@ -13,7 +13,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from gideon import config
+import config
 
 log = config.get_logger("ingestor")
 
@@ -92,7 +92,7 @@ def ingest(
 def main(argv: list[str] | None = None) -> None:
     argv = argv if argv is not None else sys.argv[1:]
     if not argv:
-        raise SystemExit("usage: python -m gideon.agents.ingestor <path/to.csv>")
+        raise SystemExit("usage: python -m agents.ingestor <path/to.csv>")
     config.ensure_dirs()
     ingest(argv[0])
 

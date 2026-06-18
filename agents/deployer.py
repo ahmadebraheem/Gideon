@@ -15,7 +15,7 @@ import shutil
 import sys
 from pathlib import Path
 
-from gideon import config
+import config
 
 log = config.get_logger("deployer")
 

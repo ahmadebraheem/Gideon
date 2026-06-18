@@ -18,7 +18,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from gideon import config
+import config
 
 log = config.get_logger("feature_eng")
 

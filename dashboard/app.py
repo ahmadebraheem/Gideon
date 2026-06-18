@@ -6,22 +6,23 @@ two Parquet artifacts it points to. It performs no modelling itself.
 
 Launch::
 
-    streamlit run gideon/dashboard/app.py
+    streamlit run dashboard/app.py
 """
 from __future__ import annotations
 
 import sys
 from pathlib import Path
 
-# Make the `gideon` package importable when Streamlit runs this file directly.
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+# Make the project root modules (config.py) importable when Streamlit runs
+# this file directly.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import pandas as pd  # noqa: E402
 import plotly.express as px  # noqa: E402
 import plotly.graph_objects as go  # noqa: E402
 import streamlit as st  # noqa: E402
 
-from gideon import config  # noqa: E402
+import config  # noqa: E402
 
 st.set_page_config(page_title="Gideon — Live ML Dashboard", page_icon="🤖", layout="wide")
 

@@ -68,50 +68,59 @@ The pipeline is fully automatic:
 ## Stack
 
 `pandas`, `numpy`, `pyarrow`, `scikit-learn`, `xgboost`, `joblib`, `watchdog`,
-`streamlit`, `plotly`. Python 3.10+.
+`streamlit`, `plotly`. Python 3.10+. Dependencies are managed with `uv`.
 
 ---
 
 ## Quick start
 
-```bash
-# 1. Install dependencies (a virtualenv is recommended)
-pip install -r gideon/requirements.txt
+Dependencies are managed with [uv](https://docs.astral.sh/uv/). All commands are
+run from the repository root.
 
-# 2. Start the watcher (run from the repository root)
-python -m gideon.watcher
+```bash
+# 1. Install dependencies into a managed virtual environment
+uv sync
+
+# 2. Start the watcher
+uv run python -m watcher
 
 # 3. In another terminal, start the dashboard
-streamlit run gideon/dashboard/app.py
+uv run streamlit run dashboard/app.py
 
-# 4. Drop a CSV into gideon/inbox/ and watch it flow through.
+# 4. Drop a CSV into inbox/ and watch it flow through.
 ```
 
 ### Run a single CSV without the watcher
 
 ```bash
-python -m gideon.boss gideon/inbox/my_data.csv
+uv run python -m boss inbox/my_data.csv
 ```
 
 ### Run one agent standalone (handy for debugging)
 
 ```bash
-python -m gideon.agents.cleaner
+uv run python -m agents.cleaner
 ```
+
+> Prefer plain pip? A `requirements.txt` is also provided:
+> `pip install -r requirements.txt`, then run the same commands without the
+> `uv run` prefix.
 
 ---
 
 ## Layout
 
 ```
-gideon/
+.
 ├── boss.py              # orchestrator
 ├── watcher.py           # inbox file watcher
 ├── config.py            # paths, constants, atomic IO helpers (no runtime state)
 ├── agents/              # the 7 specialist agents
 ├── artifacts/           # all inter-agent files live here (git-ignored)
 ├── inbox/               # drop CSVs here (processed files move to _processed/)
-└── dashboard/app.py     # Streamlit renderer
+├── dashboard/app.py     # Streamlit renderer
+├── pyproject.toml       # uv-managed dependencies
+└── uv.lock              # pinned dependency lockfile
 ```
 
 ## Notes
