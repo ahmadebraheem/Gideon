@@ -197,12 +197,53 @@ def read_json(path: os.PathLike | str) -> Any:
         return json.load(fh)
 
 
+def _cell_to_text(value: Any) -> Any:
+    """Render a single cell as a Parquet-safe scalar (text)."""
+    if value is None:
+        return None
+    if isinstance(value, float) and value != value:  # NaN
+        return None
+    if isinstance(value, (dict, list, tuple, set)):
+        try:
+            return json.dumps(value, default=str, ensure_ascii=False)
+        except TypeError:
+            return str(value)
+    if isinstance(value, bytes):
+        return value.decode("utf-8", errors="replace")
+    return value if isinstance(value, str) else str(value)
+
+
+def make_parquet_safe(df):
+    """Return a copy where object columns that would break Parquet conversion —
+    nested values (dict/list) or mixed scalar types, as is common in JSON inputs —
+    are coerced to strings. Clean, single-type columns are left untouched."""
+    out = df.copy()
+    for col in out.columns:
+        series = out[col]
+        if series.dtype != object:
+            continue
+        non_null = series.dropna()
+        if non_null.empty:
+            continue
+        has_nested = any(isinstance(v, (dict, list, tuple, set)) for v in non_null)
+        mixed_types = len({type(v) for v in non_null}) > 1
+        if has_nested or mixed_types:
+            out[col] = series.map(_cell_to_text)
+    return out
+
+
 def write_parquet(df, path: os.PathLike | str) -> Path:
     """Write a DataFrame to Parquet atomically (index is dropped on purpose:
-    row position is the stable key shared between agents)."""
+    row position is the stable key shared between agents).
+
+    Falls back to coercing problematic object columns to text if Arrow cannot
+    infer a consistent column type (e.g. nested/mixed JSON fields)."""
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_name(path.name + ".tmp")
-    df.to_parquet(tmp, index=False)
+    try:
+        df.to_parquet(tmp, index=False)
+    except Exception:  # noqa: BLE001 — retry with Parquet-safe columns
+        make_parquet_safe(df).to_parquet(tmp, index=False)
     os.replace(tmp, path)
     return path
