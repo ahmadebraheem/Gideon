@@ -54,6 +54,9 @@ MANIFEST_FILE = ARTIFACTS_DIR / "manifest.json"        # boss run manifest
 # --------------------------------------------------------------------------- #
 # Behaviour constants
 # --------------------------------------------------------------------------- #
+# Input dataset formats accepted in the inbox.
+SUPPORTED_EXTENSIONS = (".csv", ".json", ".parquet")
+
 # Column names (case-insensitive) that strongly indicate the prediction target.
 TARGET_NAME_CANDIDATES = ("target", "label", "y", "class", "outcome", "result")
 
@@ -116,11 +119,16 @@ def now_iso() -> str:
     return _dt.datetime.now(_dt.timezone.utc).isoformat()
 
 
-def inbox_csvs() -> list[Path]:
-    """CSV datasets currently present in the inbox (top level only)."""
+def inbox_datasets() -> list[Path]:
+    """Dataset files currently present in the inbox (top level only)."""
     if not INBOX_DIR.exists():
         return []
-    return [p for p in INBOX_DIR.glob("*.csv") if p.is_file() and not p.name.startswith(".")]
+    return sorted(
+        p for p in INBOX_DIR.iterdir()
+        if p.is_file()
+        and p.suffix.lower() in SUPPORTED_EXTENSIONS
+        and not p.name.startswith(".")
+    )
 
 
 def clear_artifacts() -> None:
@@ -141,9 +149,9 @@ def clear_artifacts() -> None:
 
 
 def clear_inbox() -> int:
-    """Delete the CSV datasets in the inbox. Returns how many were removed."""
+    """Delete the dataset files in the inbox. Returns how many were removed."""
     removed = 0
-    for path in inbox_csvs():
+    for path in inbox_datasets():
         try:
             path.unlink()
             removed += 1

@@ -1,9 +1,10 @@
 """Boss — the orchestrator.
 
-The boss runs the seven specialist agents in a fixed sequence for a single CSV.
-It owns the *control flow* only; all data flows through the ``artifacts/``
-folder. Every run produces ``artifacts/manifest.json`` describing per-stage
-status, timing, and any error, so the dashboard can show pipeline health.
+The boss runs the seven specialist agents in a fixed sequence for a single
+dataset (CSV / JSON / Parquet). It owns the *control flow* only; all data flows
+through the ``artifacts/`` folder. Every run produces ``artifacts/manifest.json``
+describing per-stage status, timing, and any error, so the dashboard can show
+pipeline health.
 
 Run a single file manually::
 
@@ -109,7 +110,7 @@ def run_pipeline(csv_path: str | Path) -> dict:
 def main(argv: list[str] | None = None) -> int:
     argv = argv if argv is not None else sys.argv[1:]
     if not argv:
-        print("usage: python -m boss <path/to.csv>", file=sys.stderr)
+        print("usage: python -m boss <path/to/dataset.{csv,json,parquet}>", file=sys.stderr)
         return 2
     manifest = run_pipeline(argv[0])
     return 0 if manifest["status"] == "success" else 1

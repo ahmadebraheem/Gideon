@@ -1,5 +1,5 @@
-"""Watcher — triggers the boss when a CSV lands in ``inbox/`` and resets the
-dashboard when the inbox is emptied.
+"""Watcher — triggers the boss when a dataset (CSV / JSON / Parquet) lands in
+``inbox/`` and resets the dashboard when the inbox is emptied.
 
 Design notes:
   * A single background worker thread consumes a queue, so pipeline runs are
@@ -41,9 +41,9 @@ _processed_hashes: dict[str, str] = {}
 _RESET = "__reset__"  # sentinel queued when the inbox becomes empty
 
 
-def _is_target_csv(path: Path) -> bool:
+def _is_supported(path: Path) -> bool:
     return (
-        path.suffix.lower() == ".csv"
+        path.suffix.lower() in config.SUPPORTED_EXTENSIONS
         and path.parent == config.INBOX_DIR
         and not path.name.startswith(".")
     )
@@ -85,7 +85,7 @@ class _CsvHandler(FileSystemEventHandler):
 
     def _maybe_enqueue(self, raw_path: str) -> None:
         path = Path(raw_path)
-        if _is_target_csv(path) and path.exists():
+        if _is_supported(path) and path.exists():
             self._queue.put(path)
 
     def on_created(self, event):
@@ -104,10 +104,10 @@ class _CsvHandler(FileSystemEventHandler):
         if event.is_directory:
             return
         path = Path(event.src_path)
-        if path.suffix.lower() == ".csv":
+        if path.suffix.lower() in config.SUPPORTED_EXTENSIONS:
             _processed_hashes.pop(str(path), None)
             # If no datasets remain, queue a reset so the dashboard goes clean.
-            if not config.inbox_csvs():
+            if not config.inbox_datasets():
                 self._queue.put(_RESET)
 
 
@@ -116,7 +116,7 @@ def _worker(work_queue: "queue.Queue") -> None:
         item = work_queue.get()
         try:
             if item is _RESET:
-                if not config.inbox_csvs():
+                if not config.inbox_datasets():
                     config.clear_artifacts()
                     log.info("Inbox empty — cleared artifacts; dashboard reset.")
                 continue
@@ -142,7 +142,7 @@ def _worker(work_queue: "queue.Queue") -> None:
 
 
 def _enqueue_existing(work_queue: "queue.Queue") -> None:
-    existing = sorted(config.inbox_csvs(), key=lambda p: p.stat().st_mtime)
+    existing = sorted(config.inbox_datasets(), key=lambda p: p.stat().st_mtime)
     for path in existing:
         log.info("Queuing existing file: %s", path.name)
         work_queue.put(path)
@@ -159,7 +159,8 @@ def main() -> int:
     observer = Observer()
     observer.schedule(handler, str(config.INBOX_DIR), recursive=False)
     observer.start()
-    log.info("Watching %s for CSVs (Ctrl+C to stop)…", config.INBOX_DIR)
+    log.info("Watching %s for datasets %s (Ctrl+C to stop)…",
+             config.INBOX_DIR, config.SUPPORTED_EXTENSIONS)
 
     try:
         while True:
