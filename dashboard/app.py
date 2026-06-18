@@ -28,7 +28,7 @@ from streamlit_autorefresh import st_autorefresh  # noqa: E402
 
 import config  # noqa: E402
 
-st.set_page_config(page_title="Gideon — Live ML Dashboard", page_icon="🤖", layout="wide")
+st.set_page_config(page_title="Gideon", page_icon="🤖", layout="wide")
 
 # Colour scale for grading scores.
 _GREEN, _AMBER, _RED = "#16a34a", "#d97706", "#dc2626"
@@ -121,6 +121,21 @@ def _sidebar() -> None:
                 st.write(f"{mark} {stage['name']} " + (f"({dur}s)" if dur else ""))
                 if stage.get("error"):
                     st.error(stage["error"])
+
+    st.sidebar.markdown("---")
+    with st.sidebar.expander("⚠️ Reset"):
+        st.caption("Wipe all analysis and return the dashboard to a clean slate.")
+        also_inbox = st.checkbox("Also remove CSVs from the inbox", value=True,
+                                 key="reset_inbox")
+        confirm = st.checkbox("I understand this clears the current results",
+                              key="reset_confirm")
+        if st.button("Reset now", type="primary", disabled=not confirm):
+            config.clear_artifacts()
+            removed = config.clear_inbox() if also_inbox else 0
+            st.cache_data.clear()
+            st.cache_resource.clear()
+            st.toast(f"Reset complete — removed {removed} inbox file(s).")
+            st.rerun()
 
 
 # --------------------------------------------------------------------------- #
@@ -647,13 +662,19 @@ def _tab_correlations(bundle: dict) -> None:
 # --------------------------------------------------------------------------- #
 def main() -> None:
     _sidebar()
-    st.title("Gideon — Live ML Dashboard")
+    st.title("Gideon")
 
+    # When the inbox has no datasets, show a clean waiting state instead of
+    # lingering on the previous analysis — even if stale artifacts remain on disk.
+    has_input = bool(config.inbox_csvs())
     bundle = _load_bundle(_mtime(config.DASHBOARD_DATA))
-    if bundle is None:
-        st.info("⏳ Waiting for the first dataset. Drop a CSV into the `inbox/` folder to begin.")
+    if not has_input or bundle is None:
+        st.info("⏳ Waiting for a dataset. Drop a CSV into the `inbox/` folder to begin.")
+        if not has_input and bundle is not None:
+            st.caption("The inbox is empty, so previous results are hidden. "
+                       "Add a CSV to run the pipeline again.")
         manifest = _manifest()
-        if manifest and manifest.get("status") == "running":
+        if has_input and manifest and manifest.get("status") == "running":
             st.warning("A pipeline run is in progress…")
         return
 

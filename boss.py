@@ -11,7 +11,6 @@ Run a single file manually::
 """
 from __future__ import annotations
 
-import shutil
 import sys
 import time
 import traceback
@@ -100,28 +99,11 @@ def run_pipeline(csv_path: str | Path) -> dict:
     _write_manifest(manifest)
 
     if not failed:
-        _archive_csv(csv_path)
         log.info("=== Pipeline success: %s (%.2fs) ===", csv_path.name, manifest["duration_seconds"])
     else:
         log.error("=== Pipeline failed: %s ===", csv_path.name)
 
     return manifest
-
-
-def _archive_csv(csv_path: Path) -> None:
-    """Move a successfully processed CSV into ``inbox/_processed/`` so it is not
-    re-triggered, keeping a timestamped copy if a same-named file exists."""
-    try:
-        if not csv_path.exists():
-            return
-        config.PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
-        dest = config.PROCESSED_DIR / csv_path.name
-        if dest.exists():
-            stem, suffix = csv_path.stem, csv_path.suffix
-            dest = config.PROCESSED_DIR / f"{stem}_{int(time.time())}{suffix}"
-        shutil.move(str(csv_path), str(dest))
-    except OSError as exc:
-        log.warning("Could not archive %s: %s", csv_path.name, exc)
 
 
 def main(argv: list[str] | None = None) -> int:
