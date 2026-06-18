@@ -1,0 +1,4 @@
+# User-dropped datasets are not committed.
+*
+!.gitkeep
+!.gitignore
