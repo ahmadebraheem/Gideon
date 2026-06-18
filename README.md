@@ -108,6 +108,32 @@ uv run python -m agents.cleaner
 
 ---
 
+## Dashboard
+
+The Streamlit dashboard (`dashboard/app.py`) renders the bundle from the
+`dashboard_gen` agent and the live model. Tabs:
+
+- **Overview** — dataset, target, deployment status, graded headline metric.
+- **KPIs & Insights** — auto-detects a date column and a metric column (e.g. sales/
+  revenue) and shows **MoM** and **YoY** trends, monthly **ups & downs** (green/red),
+  best/worst months, overall direction, plus **auto-discovered interesting
+  correlations** described in plain language. Falls back gracefully (insights only)
+  when the dataset has no date column.
+- **Data & EDA** — cleaned preview, cleaning report, per-column summaries and distributions.
+- **Model health** — RMSE/MAE/R² (or accuracy/F1) cards, R²/accuracy colour-coded
+  green/amber/red, and a rolling RMSE (regression) / rolling accuracy (classification) chart.
+- **Predictions** — actual vs predicted chart, anomalies flagged where deviation
+  exceeds 2σ (in red), and an anomaly-count summary.
+- **Forecast** *(regression)* — configurable 1–12 step horizon, dashed projection
+  from the last actual, ±1.5×RMSE confidence band, up/down/stable direction
+  indicator, and a spike-alert banner when the change exceeds a threshold.
+- **Feature importance** — horizontal bars sorted descending, top feature
+  highlighted, with an auto-generated one-line summary.
+- **What-if** — one slider per influential feature (auto-built from each feature's
+  min/max/mean), live `model.predict()` on change, and a prediction card showing
+  the delta from the baseline (mean) prediction.
+- **Correlations** — annotated Plotly heatmap over numeric columns, target included.
+
 ## Layout
 
 ```
