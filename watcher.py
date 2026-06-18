@@ -1,11 +1,16 @@
-"""Watcher — triggers the boss when a new CSV lands in ``inbox/``.
+"""Watcher — triggers the boss when a CSV lands in ``inbox/`` and resets the
+dashboard when the inbox is emptied.
 
 Design notes:
   * A single background worker thread consumes a queue, so pipeline runs are
     *serialised* — dropping a newer CSV mid-run simply queues another run that
     starts once the current one finishes (and the dashboard then updates).
-  * New files are only enqueued once their size has stopped changing, to avoid
-    reading a CSV that is still being copied in.
+  * Files are only processed once their size has stopped changing (so a CSV that
+    is still being copied in is not read half-written).
+  * **Content-hash de-duplication**: re-saving the same file (or duplicate
+    filesystem events) does not re-run the pipeline; only new content does.
+  * Processed CSVs **stay in the inbox**. When the last CSV is removed, the
+    artifacts are cleared so the dashboard returns to a clean "waiting" state.
 
 Run::
 
@@ -13,6 +18,7 @@ Run::
 """
 from __future__ import annotations
 
+import hashlib
 import queue
 import sys
 import threading
@@ -30,14 +36,28 @@ log = config.get_logger("watcher")
 _SETTLE_POLL_SECONDS = 0.5
 _SETTLE_STABLE_CHECKS = 3  # consecutive equal-size checks => file finished copying
 
+# path -> last processed content hash (in-memory; rebuilt on restart)
+_processed_hashes: dict[str, str] = {}
+_RESET = "__reset__"  # sentinel queued when the inbox becomes empty
+
 
 def _is_target_csv(path: Path) -> bool:
     return (
         path.suffix.lower() == ".csv"
-        and path.is_file()
-        and config.PROCESSED_DIR not in path.parents
+        and path.parent == config.INBOX_DIR
         and not path.name.startswith(".")
     )
+
+
+def _file_hash(path: Path) -> str | None:
+    try:
+        h = hashlib.md5()
+        with open(path, "rb") as fh:
+            for chunk in iter(lambda: fh.read(65536), b""):
+                h.update(chunk)
+        return h.hexdigest()
+    except OSError:
+        return None
 
 
 def _wait_until_stable(path: Path) -> bool:
@@ -60,13 +80,12 @@ def _wait_until_stable(path: Path) -> bool:
 
 
 class _CsvHandler(FileSystemEventHandler):
-    def __init__(self, work_queue: "queue.Queue[Path]") -> None:
+    def __init__(self, work_queue: "queue.Queue") -> None:
         self._queue = work_queue
 
     def _maybe_enqueue(self, raw_path: str) -> None:
         path = Path(raw_path)
-        if _is_target_csv(path):
-            log.info("Detected: %s", path.name)
+        if _is_target_csv(path) and path.exists():
             self._queue.put(path)
 
     def on_created(self, event):
@@ -81,34 +100,49 @@ class _CsvHandler(FileSystemEventHandler):
         if not event.is_directory:
             self._maybe_enqueue(event.dest_path)
 
+    def on_deleted(self, event):
+        if event.is_directory:
+            return
+        path = Path(event.src_path)
+        if path.suffix.lower() == ".csv":
+            _processed_hashes.pop(str(path), None)
+            # If no datasets remain, queue a reset so the dashboard goes clean.
+            if not config.inbox_csvs():
+                self._queue.put(_RESET)
 
-def _worker(work_queue: "queue.Queue[Path]") -> None:
-    seen_recent: dict[str, float] = {}
+
+def _worker(work_queue: "queue.Queue") -> None:
     while True:
-        path = work_queue.get()
+        item = work_queue.get()
         try:
-            # Debounce duplicate events for the same file within a short window.
-            now = time.time()
-            last = seen_recent.get(str(path), 0)
-            if now - last < 1.0 and not path.exists():
+            if item is _RESET:
+                if not config.inbox_csvs():
+                    config.clear_artifacts()
+                    log.info("Inbox empty — cleared artifacts; dashboard reset.")
                 continue
-            seen_recent[str(path)] = now
 
+            path = item
             if not _wait_until_stable(path):
                 log.info("Skipped (vanished before stable): %s", path.name)
                 continue
+
+            digest = _file_hash(path)
+            if digest is None:
+                continue
+            if _processed_hashes.get(str(path)) == digest:
+                continue  # unchanged content — skip duplicate/no-op events
+            _processed_hashes[str(path)] = digest
+
+            log.info("Processing: %s", path.name)
             boss.run_pipeline(path)
         except Exception as exc:  # noqa: BLE001 — keep the watcher alive
-            log.error("Run errored for %s: %s", path.name, exc)
+            log.error("Run errored: %s", exc)
         finally:
             work_queue.task_done()
 
 
-def _enqueue_existing(work_queue: "queue.Queue[Path]") -> None:
-    existing = sorted(
-        (p for p in config.INBOX_DIR.glob("*.csv") if _is_target_csv(p)),
-        key=lambda p: p.stat().st_mtime,
-    )
+def _enqueue_existing(work_queue: "queue.Queue") -> None:
+    existing = sorted(config.inbox_csvs(), key=lambda p: p.stat().st_mtime)
     for path in existing:
         log.info("Queuing existing file: %s", path.name)
         work_queue.put(path)
@@ -116,7 +150,7 @@ def _enqueue_existing(work_queue: "queue.Queue[Path]") -> None:
 
 def main() -> int:
     config.ensure_dirs()
-    work_queue: "queue.Queue[Path]" = queue.Queue()
+    work_queue: "queue.Queue" = queue.Queue()
 
     threading.Thread(target=_worker, args=(work_queue,), daemon=True).start()
     _enqueue_existing(work_queue)
@@ -125,7 +159,7 @@ def main() -> int:
     observer = Observer()
     observer.schedule(handler, str(config.INBOX_DIR), recursive=False)
     observer.start()
-    log.info("Watching %s for new CSVs (Ctrl+C to stop)…", config.INBOX_DIR)
+    log.info("Watching %s for CSVs (Ctrl+C to stop)…", config.INBOX_DIR)
 
     try:
         while True:

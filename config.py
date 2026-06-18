@@ -11,6 +11,7 @@ import datetime as _dt
 import json
 import logging
 import os
+import shutil
 from pathlib import Path
 from typing import Any
 
@@ -23,7 +24,6 @@ BASE_DIR = Path(__file__).resolve().parent
 INBOX_DIR = BASE_DIR / "inbox"
 ARTIFACTS_DIR = BASE_DIR / "artifacts"
 DASHBOARD_DIR = BASE_DIR / "dashboard"
-PROCESSED_DIR = INBOX_DIR / "_processed"  # CSVs are archived here after a run
 
 # --------------------------------------------------------------------------- #
 # Artifact files — the inter-agent contract.
@@ -107,13 +107,37 @@ def get_logger(name: str) -> logging.Logger:
 # --------------------------------------------------------------------------- #
 def ensure_dirs() -> None:
     """Create the runtime directories if they do not yet exist."""
-    for directory in (INBOX_DIR, ARTIFACTS_DIR, DASHBOARD_DIR, PROCESSED_DIR):
+    for directory in (INBOX_DIR, ARTIFACTS_DIR, DASHBOARD_DIR):
         directory.mkdir(parents=True, exist_ok=True)
 
 
 def now_iso() -> str:
     """Current UTC time as an ISO-8601 string."""
     return _dt.datetime.now(_dt.timezone.utc).isoformat()
+
+
+def inbox_csvs() -> list[Path]:
+    """CSV datasets currently present in the inbox (top level only)."""
+    if not INBOX_DIR.exists():
+        return []
+    return [p for p in INBOX_DIR.glob("*.csv") if p.is_file() and not p.name.startswith(".")]
+
+
+def clear_artifacts() -> None:
+    """Remove all generated artifacts so the dashboard resets to a clean state.
+    Keeps the directory itself and its git placeholders."""
+    if not ARTIFACTS_DIR.exists():
+        return
+    for path in ARTIFACTS_DIR.iterdir():
+        if path.name in (".gitkeep", ".gitignore"):
+            continue
+        if path.is_dir():
+            shutil.rmtree(path, ignore_errors=True)
+        else:
+            try:
+                path.unlink()
+            except OSError:
+                pass
 
 
 # --------------------------------------------------------------------------- #

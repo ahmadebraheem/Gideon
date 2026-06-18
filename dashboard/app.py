@@ -28,7 +28,7 @@ from streamlit_autorefresh import st_autorefresh  # noqa: E402
 
 import config  # noqa: E402
 
-st.set_page_config(page_title="Gideon — Live ML Dashboard", page_icon="🤖", layout="wide")
+st.set_page_config(page_title="Gideon", page_icon="🤖", layout="wide")
 
 # Colour scale for grading scores.
 _GREEN, _AMBER, _RED = "#16a34a", "#d97706", "#dc2626"
@@ -647,13 +647,19 @@ def _tab_correlations(bundle: dict) -> None:
 # --------------------------------------------------------------------------- #
 def main() -> None:
     _sidebar()
-    st.title("Gideon — Live ML Dashboard")
+    st.title("Gideon")
 
+    # When the inbox has no datasets, show a clean waiting state instead of
+    # lingering on the previous analysis — even if stale artifacts remain on disk.
+    has_input = bool(config.inbox_csvs())
     bundle = _load_bundle(_mtime(config.DASHBOARD_DATA))
-    if bundle is None:
-        st.info("⏳ Waiting for the first dataset. Drop a CSV into the `inbox/` folder to begin.")
+    if not has_input or bundle is None:
+        st.info("⏳ Waiting for a dataset. Drop a CSV into the `inbox/` folder to begin.")
+        if not has_input and bundle is not None:
+            st.caption("The inbox is empty, so previous results are hidden. "
+                       "Add a CSV to run the pipeline again.")
         manifest = _manifest()
-        if manifest and manifest.get("status") == "running":
+        if has_input and manifest and manifest.get("status") == "running":
             st.warning("A pipeline run is in progress…")
         return
 

@@ -163,7 +163,7 @@ The Streamlit dashboard (`dashboard/app.py`) renders the bundle from the
 ├── config.py            # paths, constants, atomic IO helpers (no runtime state)
 ├── agents/              # the 7 specialist agents
 ├── artifacts/           # all inter-agent files live here (git-ignored)
-├── inbox/               # drop CSVs here (processed files move to _processed/)
+├── inbox/               # drop CSVs here (they stay; empty it to reset the dashboard)
 ├── dashboard/app.py     # Streamlit renderer
 ├── pyproject.toml       # uv-managed dependencies
 └── uv.lock              # pinned dependency lockfile
@@ -175,7 +175,11 @@ The Streamlit dashboard (`dashboard/app.py`) renders the bundle from the
   never reads a half-written file.
 - Pipeline runs are **serialised**: dropping a newer CSV mid-run queues another
   run that starts when the current one finishes.
-- Processed CSVs are moved to `inbox/_processed/` so they are not re-triggered.
+- Dropped CSVs **stay in `inbox/`**. The watcher de-duplicates by content hash,
+  so re-saving the same file does not re-run the pipeline; only new content does.
+- **Emptying the inbox resets the dashboard**: when the last CSV is removed, the
+  artifacts are cleared and the dashboard returns to its clean "waiting" state
+  (the app also hides stale results whenever the inbox is empty).
 
 ---
 
