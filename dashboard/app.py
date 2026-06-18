@@ -21,6 +21,7 @@ import pandas as pd  # noqa: E402
 import plotly.express as px  # noqa: E402
 import plotly.graph_objects as go  # noqa: E402
 import streamlit as st  # noqa: E402
+from streamlit_autorefresh import st_autorefresh  # noqa: E402
 
 import config  # noqa: E402
 
@@ -59,13 +60,15 @@ def _sidebar() -> None:
     st.sidebar.title("🤖 Gideon")
     st.sidebar.caption("Local automated ML pipeline")
 
-    auto = st.sidebar.checkbox("Auto-refresh", value=True)
-    interval = st.sidebar.slider("Refresh interval (s)", 2, 30, 5, disabled=not auto)
+    auto = st.sidebar.checkbox("Auto-refresh", value=True, key="auto_refresh")
+    interval = st.sidebar.slider(
+        "Refresh interval (s)", 2, 30, 5, disabled=not auto, key="refresh_interval"
+    )
+    # st_autorefresh schedules a *websocket* rerun (not a full page reload), so
+    # widget/session state is preserved. It only schedules a refresh when called,
+    # so unchecking the box stops it cleanly on the next rerun.
     if auto:
-        st.markdown(
-            f'<meta http-equiv="refresh" content="{interval}">',
-            unsafe_allow_html=True,
-        )
+        st_autorefresh(interval=interval * 1000, key="auto_refresh_tick")
     if st.sidebar.button("Refresh now"):
         st.cache_data.clear()
         st.rerun()

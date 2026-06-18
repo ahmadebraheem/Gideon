@@ -17,3 +17,4 @@ watchdog>=3.0         # inbox/ file watcher
 # Dashboard
 streamlit>=1.30
 plotly>=5.18          # interactive charts in the dashboard
+streamlit-autorefresh>=1.0  # state-preserving auto-refresh (websocket rerun)
