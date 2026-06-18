@@ -33,6 +33,13 @@ st.set_page_config(page_title="Gideon", page_icon="🤖", layout="wide")
 # Colour scale for grading scores.
 _GREEN, _AMBER, _RED = "#16a34a", "#d97706", "#dc2626"
 
+# Cohesive blue palette for the KPIs & Insights charts.
+_BLUE = "#2563eb"          # primary (up / positive)
+_BLUE_LIGHT = "#93c5fd"    # secondary (down / negative)
+_BLUE_DARK = "#1e3a8a"     # trend line / emphasis
+_BLUE_NEUTRAL = "#bfdbfe"  # first / neutral bar
+_BLUE_AXIS = "#64748b"     # neutral axis line
+
 
 # --------------------------------------------------------------------------- #
 # Loading helpers (cached, keyed by file mtime so they refresh on new runs)
@@ -595,19 +602,21 @@ def _tab_kpis(bundle: dict) -> None:
         st.subheader(f"{metric} — monthly {agg} (ups & downs)")
         df = pd.DataFrame({"period": periods, "value": series})
         df["change"] = df["value"].diff()
-        colours = ["#94a3b8"] + [(_GREEN if c >= 0 else _RED) for c in df["change"][1:]]
-        fig = go.Figure(go.Bar(x=df["period"], y=df["value"], marker_color=colours))
+        colours = [_BLUE_NEUTRAL] + [(_BLUE if c >= 0 else _BLUE_LIGHT) for c in df["change"][1:]]
+        fig = go.Figure(go.Bar(x=df["period"], y=df["value"], marker_color=colours,
+                               name=agg))
         fig.add_trace(go.Scatter(x=df["period"], y=df["value"], mode="lines",
-                                 line=dict(color="#6366f1", width=2), name="trend"))
+                                 line=dict(color=_BLUE_DARK, width=2), name="trend"))
         fig.update_layout(showlegend=False, xaxis_title="month", yaxis_title=f"{agg} {metric}")
         st.plotly_chart(fig, use_container_width=True)
+        st.caption("Darker blue = month-over-month increase, lighter blue = decrease.")
 
         st.subheader("Month-over-month change (%)")
         mom = kpis["mom_pct"]
-        mom_colours = [(_GREEN if (m or 0) >= 0 else _RED) for m in mom]
+        mom_colours = [(_BLUE if (m or 0) >= 0 else _BLUE_LIGHT) for m in mom]
         fig2 = go.Figure(go.Bar(x=periods, y=[m if m is not None else 0 for m in mom],
                                 marker_color=mom_colours))
-        fig2.add_hline(y=0, line_color="#475569")
+        fig2.add_hline(y=0, line_color=_BLUE_AXIS)
         fig2.update_layout(xaxis_title="month", yaxis_title="MoM %")
         st.plotly_chart(fig2, use_container_width=True)
     else:
@@ -631,11 +640,12 @@ def _tab_kpis(bundle: dict) -> None:
             st.markdown(f"- {item['text']}")
         names = [f"{p['a']} ↔ {p['b']}" for p in top][::-1]
         vals = [abs(p["r"]) for p in top][::-1]
-        signs = [_GREEN if p["r"] > 0 else _RED for p in top][::-1]
-        fig = go.Figure(go.Bar(x=vals, y=names, orientation="h", marker_color=signs))
+        colours = [_BLUE if p["r"] > 0 else _BLUE_LIGHT for p in top][::-1]
+        fig = go.Figure(go.Bar(x=vals, y=names, orientation="h", marker_color=colours))
         fig.update_layout(height=max(250, 40 * len(names)),
                           xaxis_title="|correlation|", xaxis_range=[0, 1])
         st.plotly_chart(fig, use_container_width=True)
+        st.caption("Darker blue = positive correlation, lighter blue = negative.")
 
 
 # --------------------------------------------------------------------------- #
