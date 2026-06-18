@@ -140,6 +140,18 @@ def clear_artifacts() -> None:
                 pass
 
 
+def clear_inbox() -> int:
+    """Delete the CSV datasets in the inbox. Returns how many were removed."""
+    removed = 0
+    for path in inbox_csvs():
+        try:
+            path.unlink()
+            removed += 1
+        except OSError:
+            pass
+    return removed
+
+
 # --------------------------------------------------------------------------- #
 # Atomic IO — write to a temp file then os.replace so readers (the dashboard)
 # never observe a half-written artifact.

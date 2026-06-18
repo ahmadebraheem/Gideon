@@ -180,6 +180,9 @@ The Streamlit dashboard (`dashboard/app.py`) renders the bundle from the
 - **Emptying the inbox resets the dashboard**: when the last CSV is removed, the
   artifacts are cleared and the dashboard returns to its clean "waiting" state
   (the app also hides stale results whenever the inbox is empty).
+- **Reset button**: the dashboard sidebar has a **⚠️ Reset** control (behind a
+  confirm checkbox) that wipes all artifacts and, optionally, the inbox CSVs —
+  returning everything to a clean slate without touching the terminal.
 
 ---
 

@@ -122,6 +122,21 @@ def _sidebar() -> None:
                 if stage.get("error"):
                     st.error(stage["error"])
 
+    st.sidebar.markdown("---")
+    with st.sidebar.expander("⚠️ Reset"):
+        st.caption("Wipe all analysis and return the dashboard to a clean slate.")
+        also_inbox = st.checkbox("Also remove CSVs from the inbox", value=True,
+                                 key="reset_inbox")
+        confirm = st.checkbox("I understand this clears the current results",
+                              key="reset_confirm")
+        if st.button("Reset now", type="primary", disabled=not confirm):
+            config.clear_artifacts()
+            removed = config.clear_inbox() if also_inbox else 0
+            st.cache_data.clear()
+            st.cache_resource.clear()
+            st.toast(f"Reset complete — removed {removed} inbox file(s).")
+            st.rerun()
+
 
 # --------------------------------------------------------------------------- #
 # Data access for predictions
