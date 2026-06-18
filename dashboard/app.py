@@ -23,6 +23,7 @@ import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 import plotly.express as px  # noqa: E402
 import plotly.graph_objects as go  # noqa: E402
+import plotly.io as pio  # noqa: E402
 import streamlit as st  # noqa: E402
 from streamlit_autorefresh import st_autorefresh  # noqa: E402
 
@@ -30,8 +31,33 @@ import config  # noqa: E402
 
 st.set_page_config(page_title="Gideon", page_icon="🤖", layout="wide")
 
-# Colour scale for grading scores.
-_GREEN, _AMBER, _RED = "#16a34a", "#d97706", "#dc2626"
+# --------------------------------------------------------------------------- #
+# Brand palette — a cohesive cool→warm gradient used across every chart.
+# --------------------------------------------------------------------------- #
+PALETTE = ["#003f5c", "#594e90", "#bc4c96", "#ff5f66", "#ffa600"]
+_NAVY, _PURPLE, _MAGENTA, _CORAL, _AMBER = PALETTE
+
+# Semantic roles drawn from the palette (cool = good/up, warm = poor/down).
+_GOOD, _FAIR, _POOR = _NAVY, _AMBER, _CORAL
+_NEUTRAL_BAR = _PURPLE      # first / neutral bar
+_AXIS = "#64748b"           # neutral axis line
+_ACCENT = _MAGENTA          # secondary highlight (e.g. trend line)
+
+# Sequential scale (low → high) for count-style heatmaps, e.g. confusion matrix.
+_SEQ_SCALE = [
+    [0.0, "#f3f4f6"], [0.25, _AMBER], [0.5, _CORAL],
+    [0.75, _MAGENTA], [1.0, _NAVY],
+]
+# Diverging scale for correlations: warm = positive, cool = negative.
+_DIV_SCALE = [[0.0, _NAVY], [0.5, "#f3f4f6"], [1.0, _CORAL]]
+
+# Register the palette as the default Plotly colorway so multi-series charts
+# (lines, scatter, histograms) pick it up automatically.
+_template = go.layout.Template()
+_template.layout.colorway = PALETTE
+pio.templates["gideon"] = _template
+pio.templates.default = "plotly+gideon"
+px.defaults.color_discrete_sequence = PALETTE
 
 
 # --------------------------------------------------------------------------- #
@@ -71,10 +97,10 @@ def _manifest() -> dict | None:
 def _grade(value: float) -> tuple[str, str]:
     """Map a 0–1 score (R²/accuracy/F1) to (colour, label)."""
     if value >= 0.8:
-        return _GREEN, "Good"
+        return _GOOD, "Good"
     if value >= 0.5:
-        return _AMBER, "Fair"
-    return _RED, "Poor"
+        return _FAIR, "Fair"
+    return _POOR, "Poor"
 
 
 def _graded_metric(container, title: str, value: float, fmt: str = "{:.3f}") -> None:
@@ -273,7 +299,7 @@ def _tab_model_health(bundle: dict) -> None:
         rolling_rmse = np.sqrt(sq_err.rolling(window, min_periods=1).mean())
         fig = px.line(x=preds.index, y=rolling_rmse,
                       labels={"x": "holdout row order", "y": f"rolling RMSE (window={window})"})
-        fig.add_hline(y=metrics.get("rmse", 0), line_dash="dot", line_color=_AMBER,
+        fig.add_hline(y=metrics.get("rmse", 0), line_dash="dot", line_color=_ACCENT,
                       annotation_text="overall RMSE")
         st.plotly_chart(fig, use_container_width=True)
     elif task == "classification" and "correct" in preds.columns:
@@ -282,7 +308,7 @@ def _tab_model_health(bundle: dict) -> None:
         rolling_acc = preds["correct"].astype(float).rolling(window, min_periods=1).mean()
         fig = px.line(x=preds.index, y=rolling_acc,
                       labels={"x": "holdout row order", "y": f"rolling accuracy (window={window})"})
-        fig.add_hline(y=metrics.get("accuracy", 0), line_dash="dot", line_color=_AMBER,
+        fig.add_hline(y=metrics.get("accuracy", 0), line_dash="dot", line_color=_ACCENT,
                       annotation_text="overall accuracy")
         fig.update_yaxes(range=[0, 1.05])
         st.plotly_chart(fig, use_container_width=True)
@@ -293,7 +319,7 @@ def _tab_model_health(bundle: dict) -> None:
             labels = bundle["task"].get("class_names") or metrics.get("labels")
             fig = go.Figure(data=go.Heatmap(
                 z=cm, x=[str(l) for l in labels], y=[str(l) for l in labels],
-                colorscale="Blues", text=cm, texttemplate="%{text}"))
+                colorscale=_SEQ_SCALE, text=cm, texttemplate="%{text}"))
             fig.update_layout(title="Confusion matrix", xaxis_title="Predicted", yaxis_title="Actual")
             st.plotly_chart(fig, use_container_width=True)
 
@@ -328,7 +354,7 @@ def _tab_predictions(bundle: dict) -> None:
         if n_anom:
             fig.add_trace(go.Scatter(
                 x=preds.index[anomaly], y=preds["actual"][anomaly], mode="markers",
-                name="anomaly (>2σ)", marker=dict(color=_RED, size=9, symbol="x")))
+                name="anomaly (>2σ)", marker=dict(color=_POOR, size=9, symbol="x")))
         fig.update_layout(xaxis_title="holdout row order", yaxis_title=bundle["task"]["target"])
         st.plotly_chart(fig, use_container_width=True)
 
@@ -364,7 +390,7 @@ def _tab_predictions(bundle: dict) -> None:
                                      name="predicted", marker=dict(size=6)))
             if n_anom:
                 fig.add_trace(go.Scatter(x=preds.index[mism], y=act_code[mism], mode="markers",
-                                         name="misclassified", marker=dict(color=_RED, size=10, symbol="x")))
+                                         name="misclassified", marker=dict(color=_POOR, size=10, symbol="x")))
             fig.update_layout(
                 yaxis=dict(tickmode="array", tickvals=list(order.values()),
                            ticktext=list(order.keys())),
@@ -418,11 +444,11 @@ def _tab_forecast(bundle: dict) -> None:
     pct_change = (change / abs(last_actual) * 100) if last_actual != 0 else 0.0
 
     if abs(change) <= max(band, 1e-9):
-        direction, arrow, colour = "Stable", "→", _AMBER
+        direction, arrow, colour = "Stable", "→", _FAIR
     elif change > 0:
-        direction, arrow, colour = "Up", "↑", _GREEN
+        direction, arrow, colour = "Up", "↑", _GOOD
     else:
-        direction, arrow, colour = "Down", "↓", _RED
+        direction, arrow, colour = "Down", "↓", _POOR
 
     if abs(pct_change) > spike_pct:
         st.warning(f"⚠️ Spike alert: forecast changes by {pct_change:+.1f}% over "
@@ -445,7 +471,7 @@ def _tab_forecast(bundle: dict) -> None:
     upper = [last_actual] + list(forecast + band)
     lower = [last_actual] + list(forecast - band)
     fig.add_trace(go.Scatter(x=fc_x + fc_x[::-1], y=upper + lower[::-1], fill="toself",
-                             fillcolor="rgba(99,102,241,0.15)", line=dict(width=0),
+                             fillcolor="rgba(0,63,92,0.15)", line=dict(width=0),
                              name="±1.5×RMSE", hoverinfo="skip"))
     fig.update_layout(xaxis_title="row order", yaxis_title=target)
     st.plotly_chart(fig, use_container_width=True)
@@ -476,7 +502,7 @@ def _tab_importance(bundle: dict) -> None:
     rev = items[::-1]
     names = [k for k, _ in rev]
     vals = [v for _, v in rev]
-    colours = [_GREEN if k == top_name else "#6366f1" for k in names]
+    colours = [_AMBER if k == top_name else _NAVY for k in names]
     fig = go.Figure(go.Bar(x=vals, y=names, orientation="h", marker_color=colours))
     fig.update_layout(height=max(300, 22 * len(names)), xaxis_title="importance", yaxis_title="feature")
     st.plotly_chart(fig, use_container_width=True)
@@ -595,19 +621,21 @@ def _tab_kpis(bundle: dict) -> None:
         st.subheader(f"{metric} — monthly {agg} (ups & downs)")
         df = pd.DataFrame({"period": periods, "value": series})
         df["change"] = df["value"].diff()
-        colours = ["#94a3b8"] + [(_GREEN if c >= 0 else _RED) for c in df["change"][1:]]
-        fig = go.Figure(go.Bar(x=df["period"], y=df["value"], marker_color=colours))
+        colours = [_NEUTRAL_BAR] + [(_GOOD if c >= 0 else _POOR) for c in df["change"][1:]]
+        fig = go.Figure(go.Bar(x=df["period"], y=df["value"], marker_color=colours,
+                               name=agg))
         fig.add_trace(go.Scatter(x=df["period"], y=df["value"], mode="lines",
-                                 line=dict(color="#6366f1", width=2), name="trend"))
+                                 line=dict(color=_ACCENT, width=2), name="trend"))
         fig.update_layout(showlegend=False, xaxis_title="month", yaxis_title=f"{agg} {metric}")
         st.plotly_chart(fig, use_container_width=True)
+        st.caption("Navy = month-over-month increase, coral = decrease.")
 
         st.subheader("Month-over-month change (%)")
         mom = kpis["mom_pct"]
-        mom_colours = [(_GREEN if (m or 0) >= 0 else _RED) for m in mom]
+        mom_colours = [(_GOOD if (m or 0) >= 0 else _POOR) for m in mom]
         fig2 = go.Figure(go.Bar(x=periods, y=[m if m is not None else 0 for m in mom],
                                 marker_color=mom_colours))
-        fig2.add_hline(y=0, line_color="#475569")
+        fig2.add_hline(y=0, line_color=_AXIS)
         fig2.update_layout(xaxis_title="month", yaxis_title="MoM %")
         st.plotly_chart(fig2, use_container_width=True)
     else:
@@ -631,11 +659,12 @@ def _tab_kpis(bundle: dict) -> None:
             st.markdown(f"- {item['text']}")
         names = [f"{p['a']} ↔ {p['b']}" for p in top][::-1]
         vals = [abs(p["r"]) for p in top][::-1]
-        signs = [_GREEN if p["r"] > 0 else _RED for p in top][::-1]
-        fig = go.Figure(go.Bar(x=vals, y=names, orientation="h", marker_color=signs))
+        colours = [_GOOD if p["r"] > 0 else _POOR for p in top][::-1]
+        fig = go.Figure(go.Bar(x=vals, y=names, orientation="h", marker_color=colours))
         fig.update_layout(height=max(250, 40 * len(names)),
                           xaxis_title="|correlation|", xaxis_range=[0, 1])
         st.plotly_chart(fig, use_container_width=True)
+        st.caption("Navy = positive correlation, coral = negative.")
 
 
 # --------------------------------------------------------------------------- #
@@ -649,7 +678,7 @@ def _tab_correlations(bundle: dict) -> None:
         return
     z = np.array(corr["matrix"])
     fig = go.Figure(data=go.Heatmap(
-        z=z, x=corr["columns"], y=corr["columns"], zmin=-1, zmax=1, colorscale="RdBu",
+        z=z, x=corr["columns"], y=corr["columns"], zmin=-1, zmax=1, colorscale=_DIV_SCALE,
         text=np.round(z, 2), texttemplate="%{text}", colorbar=dict(title="r")))
     fig.update_layout(height=max(450, 32 * len(corr["columns"])))
     st.plotly_chart(fig, use_container_width=True)
