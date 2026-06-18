@@ -114,6 +114,11 @@ The Streamlit dashboard (`dashboard/app.py`) renders the bundle from the
 `dashboard_gen` agent and the live model. Tabs:
 
 - **Overview** — dataset, target, deployment status, graded headline metric.
+- **KPIs & Insights** — auto-detects a date column and a metric column (e.g. sales/
+  revenue) and shows **MoM** and **YoY** trends, monthly **ups & downs** (green/red),
+  best/worst months, overall direction, plus **auto-discovered interesting
+  correlations** described in plain language. Falls back gracefully (insights only)
+  when the dataset has no date column.
 - **Data & EDA** — cleaned preview, cleaning report, per-column summaries and distributions.
 - **Model health** — RMSE/MAE/R² (or accuracy/F1) cards, R²/accuracy colour-coded
   green/amber/red, and a rolling RMSE (regression) / rolling accuracy (classification) chart.

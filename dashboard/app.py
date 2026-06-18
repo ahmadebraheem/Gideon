@@ -186,11 +186,14 @@ def _tab_data(bundle: dict) -> None:
     st.markdown("---")
     summaries = bundle.get("column_summaries", [])
     st.subheader("Column summaries")
-    st.dataframe(
-        pd.DataFrame([{k: v for k, v in s.items() if k not in ("histogram", "top_values")}
-                      for s in summaries]),
-        use_container_width=True,
-    )
+    sdf = pd.DataFrame([{k: v for k, v in s.items() if k not in ("histogram", "top_values")}
+                       for s in summaries])
+    # Some stat columns (min/max) mix floats and datetime-strings across rows;
+    # stringify object columns so Arrow can serialise the table.
+    for col in sdf.columns:
+        if sdf[col].dtype == object:
+            sdf[col] = sdf[col].astype(str)
+    st.dataframe(sdf, use_container_width=True)
 
     st.subheader("Distribution")
     names = [s["name"] for s in summaries]
@@ -522,6 +525,105 @@ def _tab_whatif(bundle: dict) -> None:
 
 
 # --------------------------------------------------------------------------- #
+# Tab: KPIs & Insights
+# --------------------------------------------------------------------------- #
+def _fmt(v: float) -> str:
+    if v is None:
+        return "—"
+    a = abs(v)
+    if a >= 1_000_000:
+        return f"{v/1_000_000:,.2f}M"
+    if a >= 1_000:
+        return f"{v/1_000:,.1f}K"
+    return f"{v:,.2f}"
+
+
+def _delta(pct: float | None) -> str | None:
+    return None if pct is None else f"{pct:+.1f}%"
+
+
+def _tab_kpis(bundle: dict) -> None:
+    kpis = bundle.get("kpis", {})
+    insights = bundle.get("insights", {})
+
+    st.subheader("Business KPIs")
+    if kpis.get("available"):
+        s = kpis["summary"]
+        metric, date_col = kpis["metric_column"], kpis["date_column"]
+        st.caption(f"Tracking **{metric}** (monthly total) over **{date_col}** "
+                   f"— {s['n_months']} months.")
+
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric(f"Latest ({s['latest_period']})", _fmt(s["latest_value"]),
+                  _delta(s.get("mom_pct")), help="Δ vs previous month (MoM)")
+        c2.metric("YoY", _delta(s.get("yoy_pct")) or "—",
+                  help="vs same month last year")
+        arrow = {"up": "↑", "down": "↓", "flat": "→"}[s["trend"]]
+        c3.metric("Overall trend", f"{arrow} {s['trend'].title()}")
+        c4.metric("Total", _fmt(s["total"]))
+
+        b1, b2, b3 = st.columns(3)
+        b1.metric(f"Best ({s['best_period']})", _fmt(s["best_value"]))
+        b2.metric(f"Worst ({s['worst_period']})", _fmt(s["worst_value"]))
+        if s.get("biggest_rise") and s.get("biggest_drop"):
+            b3.metric("Biggest MoM swing",
+                      f"{s['biggest_rise']['pct']:+.0f}% / {s['biggest_drop']['pct']:+.0f}%",
+                      help=f"rise in {s['biggest_rise']['period']}, "
+                           f"drop in {s['biggest_drop']['period']}")
+
+        agg = st.radio("Monthly aggregation", ["total", "average", "count"],
+                       horizontal=True, key="kpi_agg")
+        series = {"total": kpis["values_sum"], "average": kpis["values_mean"],
+                  "count": kpis["values_count"]}[agg]
+        periods = kpis["periods"]
+
+        st.subheader(f"{metric} — monthly {agg} (ups & downs)")
+        df = pd.DataFrame({"period": periods, "value": series})
+        df["change"] = df["value"].diff()
+        colours = ["#94a3b8"] + [(_GREEN if c >= 0 else _RED) for c in df["change"][1:]]
+        fig = go.Figure(go.Bar(x=df["period"], y=df["value"], marker_color=colours))
+        fig.add_trace(go.Scatter(x=df["period"], y=df["value"], mode="lines",
+                                 line=dict(color="#6366f1", width=2), name="trend"))
+        fig.update_layout(showlegend=False, xaxis_title="month", yaxis_title=f"{agg} {metric}")
+        st.plotly_chart(fig, use_container_width=True)
+
+        st.subheader("Month-over-month change (%)")
+        mom = kpis["mom_pct"]
+        mom_colours = [(_GREEN if (m or 0) >= 0 else _RED) for m in mom]
+        fig2 = go.Figure(go.Bar(x=periods, y=[m if m is not None else 0 for m in mom],
+                                marker_color=mom_colours))
+        fig2.add_hline(y=0, line_color="#475569")
+        fig2.update_layout(xaxis_title="month", yaxis_title="MoM %")
+        st.plotly_chart(fig2, use_container_width=True)
+    else:
+        st.info(f"⏳ Time-based KPIs unavailable: {kpis.get('reason', 'no date column')}.")
+
+    st.markdown("---")
+    st.subheader("Interesting correlations")
+    top = insights.get("top_correlations", [])
+    tgt = insights.get("target_correlations", [])
+    if not top and not tgt:
+        st.info("No strong correlations found in this dataset.")
+        return
+
+    if tgt:
+        st.markdown(f"**What moves the target (`{bundle['task']['target']}`):**")
+        for item in tgt:
+            st.markdown(f"- {item['text']}")
+    if top:
+        st.markdown("**Strongest relationships between columns:**")
+        for item in top:
+            st.markdown(f"- {item['text']}")
+        names = [f"{p['a']} ↔ {p['b']}" for p in top][::-1]
+        vals = [abs(p["r"]) for p in top][::-1]
+        signs = [_GREEN if p["r"] > 0 else _RED for p in top][::-1]
+        fig = go.Figure(go.Bar(x=vals, y=names, orientation="h", marker_color=signs))
+        fig.update_layout(height=max(250, 40 * len(names)),
+                          xaxis_title="|correlation|", xaxis_range=[0, 1])
+        st.plotly_chart(fig, use_container_width=True)
+
+
+# --------------------------------------------------------------------------- #
 # Tab: Correlations
 # --------------------------------------------------------------------------- #
 def _tab_correlations(bundle: dict) -> None:
@@ -558,24 +660,26 @@ def main() -> None:
     st.caption(f"Dataset: **{bundle['dataset']['name']}**  •  generated {bundle.get('generated_at', '')}")
 
     tabs = st.tabs([
-        "Overview", "Data & EDA", "Model health", "Predictions",
+        "Overview", "KPIs & Insights", "Data & EDA", "Model health", "Predictions",
         "Forecast", "Feature importance", "What-if", "Correlations",
     ])
     with tabs[0]:
         _tab_overview(bundle)
     with tabs[1]:
-        _tab_data(bundle)
+        _tab_kpis(bundle)
     with tabs[2]:
-        _tab_model_health(bundle)
+        _tab_data(bundle)
     with tabs[3]:
-        _tab_predictions(bundle)
+        _tab_model_health(bundle)
     with tabs[4]:
-        _tab_forecast(bundle)
+        _tab_predictions(bundle)
     with tabs[5]:
-        _tab_importance(bundle)
+        _tab_forecast(bundle)
     with tabs[6]:
-        _tab_whatif(bundle)
+        _tab_importance(bundle)
     with tabs[7]:
+        _tab_whatif(bundle)
+    with tabs[8]:
         _tab_correlations(bundle)
 
 
