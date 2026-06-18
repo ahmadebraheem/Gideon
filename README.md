@@ -72,12 +72,32 @@ The pipeline is fully automatic:
 
 ---
 
+## Prerequisites
+
+- **Python 3.10+** and [uv](https://docs.astral.sh/uv/).
+- **macOS only — install the OpenMP runtime** that XGBoost depends on:
+
+  ```bash
+  brew install libomp
+  ```
+
+  Without it, importing XGBoost fails with
+  `XGBoostError: Library not loaded: @rpath/libomp.dylib`.
+  See [Troubleshooting](#troubleshooting) below.
+
+  (Linux wheels bundle their own OpenMP, so no extra step is needed there.)
+
+---
+
 ## Quick start
 
 Dependencies are managed with [uv](https://docs.astral.sh/uv/). All commands are
 run from the repository root.
 
 ```bash
+# 0. macOS only: install the OpenMP runtime XGBoost needs
+brew install libomp
+
 # 1. Install dependencies into a managed virtual environment
 uv sync
 
@@ -130,3 +150,35 @@ uv run python -m agents.cleaner
 - Pipeline runs are **serialised**: dropping a newer CSV mid-run queues another
   run that starts when the current one finishes.
 - Processed CSVs are moved to `inbox/_processed/` so they are not re-triggered.
+
+---
+
+## Troubleshooting
+
+### `XGBoostError: Library not loaded: @rpath/libomp.dylib` (macOS)
+
+XGBoost's native library needs the **OpenMP runtime**, which macOS does not ship
+by default. Install it with Homebrew:
+
+```bash
+brew install libomp
+```
+
+Then re-run your command. If you use MacPorts instead of Homebrew, install
+`libomp` via `sudo port install libomp`. On Apple Silicon, make sure you are
+using a matching (arm64) Python/Homebrew so the architectures line up.
+
+Full error for reference:
+
+```
+xgboost.core.XGBoostError:
+XGBoost Library (libxgboost.dylib) could not be loaded.
+  ...
+  Reason: tried: '/usr/local/opt/libomp/lib/libomp.dylib' (no such file) ...
+```
+
+### `ModuleNotFoundError: No module named 'config'` / `agents`
+
+Run all commands **from the repository root** (the folder containing `boss.py`),
+e.g. `uv run python -m boss inbox/my_data.csv`. The flat module layout resolves
+`config` and `agents` relative to that directory.
