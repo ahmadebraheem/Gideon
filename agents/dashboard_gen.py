@@ -6,9 +6,11 @@ Output : ``artifacts/dashboard_data.json`` — the single bundle the Streamlit
          app renders.
 
 Responsibility: turn the raw artifacts into everything the dashboard needs —
-dataset overview, per-column EDA summaries, numeric correlations, model
-metrics, feature importances, and a pointer to the predictions table. The
-Streamlit app does no analysis of its own; it just renders this bundle.
+dataset overview, per-column EDA summaries, target-inclusive correlations, model
+metrics, feature importances, per-feature input ranges (for the what-if
+simulator), and pointers to the predictions table and the live model. The
+Streamlit app mostly renders this bundle; the only computation it does at
+runtime is the interactive what-if `model.predict()` and forecast projection.
 """
 from __future__ import annotations
 
@@ -63,13 +65,49 @@ def _column_summaries(df: pd.DataFrame) -> list[dict]:
     return summaries
 
 
-def _numeric_correlations(df: pd.DataFrame) -> dict | None:
+def _correlations_with_target(df: pd.DataFrame, feature_meta: dict) -> dict | None:
+    """Correlation matrix over numeric columns, always including the target
+    (label-encoding it first when it is categorical)."""
+    df = df.copy()
+    target = feature_meta.get("target_name")
+    if target in df.columns and not pd.api.types.is_numeric_dtype(df[target]):
+        mapping = feature_meta.get("label_mapping")
+        if mapping:
+            df[target] = df[target].astype(str).map(mapping)
+
     num = df.select_dtypes(include=[np.number])
     if num.shape[1] < 2:
         return None
-    num = num.iloc[:, :_MAX_CORR_COLS]
-    corr = num.corr(numeric_only=True).fillna(0.0)
-    return {"columns": list(corr.columns), "matrix": corr.values.round(4).tolist()}
+
+    if target in num.columns:
+        others = [c for c in num.columns if c != target][: _MAX_CORR_COLS - 1]
+        cols = others + [target]
+    else:
+        cols = list(num.columns)[:_MAX_CORR_COLS]
+
+    corr = num[cols].corr().fillna(0.0)
+    return {
+        "columns": list(corr.columns),
+        "matrix": corr.round(4).values.tolist(),
+        "target": target if target in cols else None,
+    }
+
+
+def _feature_inputs(features_df: pd.DataFrame, target: str, importances: dict) -> dict:
+    """Per-feature min/max/mean for the what-if sliders, ordered by importance
+    (most influential first)."""
+    feat_cols = [c for c in features_df.columns if c != target]
+    ordered = [c for c in importances if c in feat_cols]
+    ordered += [c for c in feat_cols if c not in importances]
+    out: dict[str, dict] = {}
+    for col in ordered:
+        s = pd.to_numeric(features_df[col], errors="coerce")
+        out[col] = {
+            "min": float(np.nanmin(s.values)),
+            "max": float(np.nanmax(s.values)),
+            "mean": float(np.nanmean(s.values)),
+        }
+    return out
 
 
 def generate(
@@ -88,6 +126,10 @@ def generate(
 
     importances = train_meta.get("feature_importances", {})
     top_importances = dict(list(importances.items())[:_MAX_TOP_FEATURES])
+
+    features_df = pd.read_parquet(config.FEATURES_PARQUET)
+    target_name = feature_meta.get("target_name")
+    feature_inputs = _feature_inputs(features_df, target_name, importances)
 
     bundle = {
         "generated_at": config.now_iso(),
@@ -110,11 +152,19 @@ def generate(
         "metrics": metrics,
         "deployment": deployment,
         "feature_importances": top_importances,
+        "model": {
+            "path": str(config.MODEL_FILE.resolve()),
+            "type": train_meta.get("model_type"),
+            "features": train_meta.get("feature_columns"),
+        },
+        "feature_inputs": feature_inputs,
         "column_summaries": _column_summaries(cleaned),
-        "correlations": _numeric_correlations(cleaned),
+        "correlations": _correlations_with_target(cleaned, feature_meta),
         "artifacts": {
             "cleaned_parquet": str(config.CLEANED_PARQUET.resolve()),
+            "features_parquet": str(config.FEATURES_PARQUET.resolve()),
             "predictions_parquet": str(config.PREDICTIONS_PARQUET.resolve()),
+            "model_file": str(config.MODEL_FILE.resolve()),
         },
         "preview_rows": cleaned.head(50).astype(object).where(
             pd.notna(cleaned.head(50)), None
