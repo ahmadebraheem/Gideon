@@ -666,10 +666,11 @@ def main() -> None:
 
     # When the inbox has no datasets, show a clean waiting state instead of
     # lingering on the previous analysis — even if stale artifacts remain on disk.
-    has_input = bool(config.inbox_csvs())
+    has_input = bool(config.inbox_datasets())
     bundle = _load_bundle(_mtime(config.DASHBOARD_DATA))
     if not has_input or bundle is None:
-        st.info("⏳ Waiting for a dataset. Drop a CSV into the `inbox/` folder to begin.")
+        st.info("⏳ Waiting for a dataset. Drop a CSV, JSON, or Parquet file into "
+                "the `inbox/` folder to begin.")
         if not has_input and bundle is not None:
             st.caption("The inbox is empty, so previous results are hidden. "
                        "Add a CSV to run the pipeline again.")

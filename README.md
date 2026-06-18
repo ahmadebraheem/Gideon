@@ -2,10 +2,10 @@
 
 A **local, zero-cloud, zero-API** automated ML pipeline.
 
-Drop a CSV into `inbox/` and Gideon automatically cleans the data, engineers
-features, trains a model, evaluates it, deploys it, and refreshes a live
-Streamlit dashboard. Drop a newer CSV and the whole pipeline reruns and the
-dashboard updates. **Nobody touches any code.**
+Drop a dataset (**CSV, JSON, or Parquet**) into `inbox/` and Gideon automatically
+cleans the data, engineers features, trains a model, evaluates it, deploys it, and
+refreshes a live Streamlit dashboard. Drop a newer file and the whole pipeline
+reruns and the dashboard updates. **Nobody touches any code.**
 
 Everything runs on your machine. No network calls, no external services.
 
@@ -45,7 +45,7 @@ Everything runs on your machine. No network calls, no external services.
 
 | # | Agent           | Input                       | Output                                |
 |---|-----------------|-----------------------------|---------------------------------------|
-| 1 | `ingestor`      | `inbox/*.csv`               | `raw.parquet` + `ingest_meta.json`    |
+| 1 | `ingestor`      | `inbox/*.{csv,json,parquet}` | `raw.parquet` + `ingest_meta.json`   |
 | 2 | `cleaner`       | `raw.parquet`               | `cleaned.parquet` + `clean_report.json` |
 | 3 | `feature_eng`   | `cleaned.parquet`           | `features.parquet` + `feature_meta.json` |
 | 4 | `trainer`       | `features.parquet`          | `model.joblib` + `train_meta.json`    |
@@ -107,10 +107,10 @@ uv run python -m watcher
 # 3. In another terminal, start the dashboard
 uv run streamlit run dashboard/app.py
 
-# 4. Drop a CSV into inbox/ and watch it flow through.
+# 4. Drop a CSV/JSON/Parquet file into inbox/ and watch it flow through.
 ```
 
-### Run a single CSV without the watcher
+### Run a single dataset without the watcher
 
 ```bash
 uv run python -m boss inbox/my_data.csv
@@ -163,7 +163,7 @@ The Streamlit dashboard (`dashboard/app.py`) renders the bundle from the
 ├── config.py            # paths, constants, atomic IO helpers (no runtime state)
 ├── agents/              # the 7 specialist agents
 ├── artifacts/           # all inter-agent files live here (git-ignored)
-├── inbox/               # drop CSVs here (they stay; empty it to reset the dashboard)
+├── inbox/               # drop CSV/JSON/Parquet here (they stay; empty it to reset)
 ├── dashboard/app.py     # Streamlit renderer
 ├── pyproject.toml       # uv-managed dependencies
 └── uv.lock              # pinned dependency lockfile
