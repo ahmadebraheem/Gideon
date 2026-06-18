@@ -131,10 +131,13 @@ def _worker(work_queue: "queue.Queue") -> None:
                 continue
             if _processed_hashes.get(str(path)) == digest:
                 continue  # unchanged content — skip duplicate/no-op events
-            _processed_hashes[str(path)] = digest
 
             log.info("Processing: %s", path.name)
-            boss.run_pipeline(path)
+            manifest = boss.run_pipeline(path)
+            # Only remember the hash on success, so a failed dataset can be
+            # retried by simply re-dropping it (or after a fix).
+            if manifest.get("status") == "success":
+                _processed_hashes[str(path)] = digest
         except Exception as exc:  # noqa: BLE001 — keep the watcher alive
             log.error("Run errored: %s", exc)
         finally:

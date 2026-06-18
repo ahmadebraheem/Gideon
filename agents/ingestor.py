@@ -86,6 +86,10 @@ def ingest(
     if junk:
         df = df.drop(columns=junk)
 
+    # JSON inputs often carry nested or mixed-type columns that Parquet/Arrow
+    # cannot represent; coerce those to text so the rest of the pipeline is safe.
+    df = config.make_parquet_safe(df)
+
     if df.shape[1] < 2:
         raise ValueError(
             "Dataset must contain at least 2 columns (features + a target column)."
