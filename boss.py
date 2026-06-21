@@ -26,6 +26,7 @@ from agents import (
     feature_eng,
     ingestor,
     trainer,
+    monitor,
 )
 
 log = config.get_logger("boss")
@@ -98,6 +99,11 @@ def run_pipeline(csv_path: str | Path) -> dict:
     manifest["finished_at"] = config.now_iso()
     manifest["duration_seconds"] = round(time.perf_counter() - run_start, 3)
     _write_manifest(manifest)
+
+    try:
+        monitor.observe(manifest)
+    except Exception as exc:          # monitor must never crash the pipeline
+        log.warning("Monitor failed: %s", exc)
 
     if not failed:
         log.info("=== Pipeline success: %s (%.2fs) ===", csv_path.name, manifest["duration_seconds"])

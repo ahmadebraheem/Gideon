@@ -19,6 +19,7 @@ dependencies = [
     "streamlit>=1.30",
     "plotly>=5.18",       # interactive charts in the dashboard
     "streamlit-autorefresh>=1.0",  # state-preserving auto-refresh (websocket rerun)
+    "psutil>=7.2.2",
 ]
 
 # This is an application, not an importable library — tell uv not to build/install

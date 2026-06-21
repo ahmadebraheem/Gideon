@@ -21,12 +21,12 @@ Everything runs on your machine. No network calls, no external services.
             └────────┬────────┘
                      │ triggers
             ┌────────▼────────┐
-            │      boss       │  orchestrates the 7 agents in sequence
+            │      boss       │  orchestrates the 8 agents in sequence
             └────────┬────────┘
                      │
-   ingestor → cleaner → feature_eng → trainer → evaluator → deployer → dashboard_gen
-        │         │          │           │          │          │            │
-        └─────────┴──────────┴─── artifacts/ ───────┴──────────┴────────────┘
+   ingestor → cleaner → feature_eng → trainer → evaluator → deployer → dashboard_gen → monitor
+        │         │          │           │          │          │            │             │
+        └─────────┴──────────┴─── artifacts/ ───────┴──────────┴────────────┘           logs/
                      │
             ┌────────▼────────┐
             │  dashboard/app  │  Streamlit renders artifacts/dashboard_data.json
@@ -35,13 +35,13 @@ Everything runs on your machine. No network calls, no external services.
 
 **Design rules**
 
-- **7 specialist agents**, each owning exactly one task.
+- *8 specialist agents**, each owning exactly one task.
 - **One agent, one input, one output — no shared in-memory state.** Agents
   communicate *only* by reading/writing files in `artifacts/`.
 - A **boss** orchestrates them sequentially and writes a run manifest.
 - A **watcher** triggers the boss when a new CSV lands.
 
-### The seven agents
+### The eight agents
 
 | # | Agent           | Input                       | Output                                |
 |---|-----------------|-----------------------------|---------------------------------------|
@@ -52,6 +52,7 @@ Everything runs on your machine. No network calls, no external services.
 | 5 | `evaluator`     | `model.joblib` + features   | `metrics.json` + `predictions.parquet` |
 | 6 | `deployer`      | model + metrics             | `deployment.json` (+ versioned model) |
 | 7 | `dashboard_gen` | all upstream artifacts      | `dashboard_data.json`                 |
+| 8 | `monitor` | `manifest.json` +  all artifacts     | `logs/monitor.json`                 |
 
 The pipeline is fully automatic:
 
@@ -67,7 +68,7 @@ The pipeline is fully automatic:
 
 ## Stack
 
-`pandas`, `numpy`, `pyarrow`, `scikit-learn`, `xgboost`, `joblib`, `watchdog`,
+`pandas`, `numpy`, `pyarrow`, `scikit-learn`, `xgboost`, `joblib`, `watchdog`, `psutil`,
 `streamlit`, `plotly`. Python 3.10+. Dependencies are managed with `uv`.
 
 ---
@@ -161,10 +162,11 @@ The Streamlit dashboard (`dashboard/app.py`) renders the bundle from the
 ├── boss.py              # orchestrator
 ├── watcher.py           # inbox file watcher
 ├── config.py            # paths, constants, atomic IO helpers (no runtime state)
-├── agents/              # the 7 specialist agents
+├── agents/              # the 8 specialist agents
 ├── artifacts/           # all inter-agent files live here (git-ignored)
 ├── inbox/               # drop CSV/JSON/Parquet here (they stay; empty it to reset)
 ├── dashboard/app.py     # Streamlit renderer
+├── logs/                # monitor logs — gideon.log, runs.jsonl, monitor.json
 ├── pyproject.toml       # uv-managed dependencies
 └── uv.lock              # pinned dependency lockfile
 ```
