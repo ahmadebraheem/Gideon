@@ -1,0 +1,618 @@
+{
+  "generated_at": "2026-06-21T10:59:26.473994+00:00",
+  "run": {
+    "run_id": "2026-06-21T10:59:23.115004+00:00",
+    "source": "index_1.csv",
+    "status": "success",
+    "duration_seconds": 3.356,
+    "stages": [
+      {
+        "name": "ingestor",
+        "status": "success",
+        "duration_seconds": 0.035,
+        "error": null
+      },
+      {
+        "name": "cleaner",
+        "status": "success",
+        "duration_seconds": 0.116,
+        "error": null
+      },
+      {
+        "name": "feature_eng",
+        "status": "success",
+        "duration_seconds": 0.03,
+        "error": null
+      },
+      {
+        "name": "trainer",
+        "status": "success",
+        "duration_seconds": 2.927,
+        "error": null
+      },
+      {
+        "name": "evaluator",
+        "status": "success",
+        "duration_seconds": 0.133,
+        "error": null
+      },
+      {
+        "name": "deployer",
+        "status": "success",
+        "duration_seconds": 0.015,
+        "error": null
+      },
+      {
+        "name": "dashboard_gen",
+        "status": "success",
+        "duration_seconds": 0.084,
+        "error": null
+      }
+    ]
+  },
+  "artifact_health": [
+    {
+      "artifact": "raw.parquet",
+      "present": true,
+      "size_kb": 69.5,
+      "age_seconds": 3
+    },
+    {
+      "artifact": "ingest_meta.json",
+      "present": true,
+      "size_kb": 0.5,
+      "age_seconds": 3
+    },
+    {
+      "artifact": "cleaned.parquet",
+      "present": true,
+      "size_kb": 57.4,
+      "age_seconds": 3
+    },
+    {
+      "artifact": "clean_report.json",
+      "present": true,
+      "size_kb": 0.3,
+      "age_seconds": 3
+    },
+    {
+      "artifact": "features.parquet",
+      "present": true,
+      "size_kb": 18.9,
+      "age_seconds": 3
+    },
+    {
+      "artifact": "feature_meta.json",
+      "present": true,
+      "size_kb": 0.9,
+      "age_seconds": 3
+    },
+    {
+      "artifact": "model.joblib",
+      "present": true,
+      "size_kb": 5319.2,
+      "age_seconds": 0
+    },
+    {
+      "artifact": "train_meta.json",
+      "present": true,
+      "size_kb": 9.1,
+      "age_seconds": 0
+    },
+    {
+      "artifact": "metrics.json",
+      "present": true,
+      "size_kb": 1.2,
+      "age_seconds": 0
+    },
+    {
+      "artifact": "predictions.parquet",
+      "present": true,
+      "size_kb": 11.3,
+      "age_seconds": 0
+    },
+    {
+      "artifact": "deployment.json",
+      "present": true,
+      "size_kb": 0.6,
+      "age_seconds": 0
+    },
+    {
+      "artifact": "dashboard_data.json",
+      "present": true,
+      "size_kb": 21.6,
+      "age_seconds": 0
+    },
+    {
+      "artifact": "manifest.json",
+      "present": true,
+      "size_kb": 1.7,
+      "age_seconds": 0
+    }
+  ],
+  "model_metrics": {
+    "accuracy": 0.6881868131868132,
+    "precision_weighted": 0.684422301796633,
+    "recall_weighted": 0.6881868131868132,
+    "f1_weighted": 0.6839850828431085,
+    "confusion_matrix": [
+      [
+        101,
+        1,
+        0,
+        0,
+        14,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        165,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        42,
+        6,
+        0,
+        0,
+        11,
+        41
+      ],
+      [
+        0,
+        0,
+        10,
+        18,
+        0,
+        0,
+        4,
+        17
+      ],
+      [
+        20,
+        0,
+        0,
+        0,
+        38,
+        0,
+        0,
+        0
+      ],
+      [
+        1,
+        0,
+        0,
+        0,
+        0,
+        26,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        10,
+        5,
+        0,
+        0,
+        12,
+        29
+      ],
+      [
+        0,
+        0,
+        29,
+        5,
+        0,
+        0,
+        24,
+        99
+      ]
+    ],
+    "labels": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    "roc_auc_ovr_weighted": 0.9304058860298755,
+    "headline_metric": "accuracy",
+    "headline_value": 0.6881868131868132,
+    "task_type": "classification",
+    "target_name": "coffee_name",
+    "n_test": 728,
+    "evaluated_at": "2026-06-21T10:59:26.351401+00:00"
+  },
+  "drift_events": [],
+  "system": {
+    "cpu_percent": 58.6,
+    "memory_used_gb": 9.94,
+    "memory_total_gb": 17.18,
+    "memory_percent": 64.5,
+    "disk_used_gb": 428.7,
+    "disk_free_gb": 46.68,
+    "disk_percent": 90.2
+  },
+  "history": {
+    "total_runs": 16,
+    "success_count": 6,
+    "failed_count": 10,
+    "avg_duration": 5.172,
+    "recent": [
+      {
+        "run_id": "2026-06-21T10:49:11.108283+00:00",
+        "timestamp": "2026-06-21T10:49:11.115179+00:00",
+        "source": "zara.csv",
+        "status": "failed",
+        "duration_seconds": 0.005,
+        "metrics": {},
+        "drift_events": 11,
+        "artifacts_ok": 1,
+        "artifacts_miss": 12
+      },
+      {
+        "run_id": "2026-06-21T10:49:13.150940+00:00",
+        "timestamp": "2026-06-21T10:49:13.160501+00:00",
+        "source": "zara.csv",
+        "status": "failed",
+        "duration_seconds": 0.006,
+        "metrics": {},
+        "drift_events": 11,
+        "artifacts_ok": 1,
+        "artifacts_miss": 12
+      },
+      {
+        "run_id": "2026-06-21T10:50:25.119042+00:00",
+        "timestamp": "2026-06-21T10:50:39.587522+00:00",
+        "source": "OGORBcsv.csv",
+        "status": "failed",
+        "duration_seconds": 14.467,
+        "metrics": {},
+        "drift_events": 11,
+        "artifacts_ok": 7,
+        "artifacts_miss": 6
+      },
+      {
+        "run_id": "2026-06-21T10:50:41.824405+00:00",
+        "timestamp": "2026-06-21T10:50:55.096428+00:00",
+        "source": "OGORBcsv.csv",
+        "status": "failed",
+        "duration_seconds": 13.269,
+        "metrics": {},
+        "drift_events": 0,
+        "artifacts_ok": 7,
+        "artifacts_miss": 6
+      },
+      {
+        "run_id": "2026-06-21T10:50:57.333308+00:00",
+        "timestamp": "2026-06-21T10:51:09.898293+00:00",
+        "source": "OGORBcsv.csv",
+        "status": "failed",
+        "duration_seconds": 12.564,
+        "metrics": {},
+        "drift_events": 0,
+        "artifacts_ok": 5,
+        "artifacts_miss": 8
+      },
+      {
+        "run_id": "2026-06-21T10:51:18.465485+00:00",
+        "timestamp": "2026-06-21T10:51:31.074624+00:00",
+        "source": "OGORBcsv_cleaned.csv",
+        "status": "failed",
+        "duration_seconds": 12.609,
+        "metrics": {},
+        "drift_events": 0,
+        "artifacts_ok": 7,
+        "artifacts_miss": 6
+      },
+      {
+        "run_id": "2026-06-21T10:51:33.336414+00:00",
+        "timestamp": "2026-06-21T10:51:46.568095+00:00",
+        "source": "OGORBcsv_cleaned.csv",
+        "status": "failed",
+        "duration_seconds": 13.232,
+        "metrics": {},
+        "drift_events": 0,
+        "artifacts_ok": 5,
+        "artifacts_miss": 8
+      },
+      {
+        "run_id": "2026-06-21T10:56:09.948335+00:00",
+        "timestamp": "2026-06-21T10:56:16.257117+00:00",
+        "source": "Fahrraddiebstahl.csv",
+        "status": "success",
+        "duration_seconds": 6.306,
+        "metrics": {
+          "accuracy": 0.946548919358587,
+          "precision_weighted": 0.916779450997914,
+          "recall_weighted": 0.946548919358587,
+          "f1_weighted": 0.9247339839846032,
+          "confusion_matrix": [
+            [
+              0,
+              1,
+              0,
+              15
+            ],
+            [
+              0,
+              13,
+              0,
+              419
+            ],
+            [
+              0,
+              0,
+              426,
+              0
+            ],
+            [
+              0,
+              25,
+              0,
+              7707
+            ]
+          ],
+          "labels": [
+            0,
+            1,
+            2,
+            3
+          ],
+          "roc_auc_ovr_weighted": 0.8682663492251862,
+          "headline_metric": "accuracy",
+          "headline_value": 0.946548919358587,
+          "task_type": "classification",
+          "target_name": "ERFASSUNGSGRUND",
+          "n_test": 8606,
+          "evaluated_at": "2026-06-21T10:56:16.051215+00:00"
+        },
+        "drift_events": 21,
+        "artifacts_ok": 13,
+        "artifacts_miss": 0
+      },
+      {
+        "run_id": "2026-06-21T10:58:53.409986+00:00",
+        "timestamp": "2026-06-21T10:58:56.871879+00:00",
+        "source": "index_1.csv",
+        "status": "success",
+        "duration_seconds": 3.459,
+        "metrics": {
+          "accuracy": 0.6881868131868132,
+          "precision_weighted": 0.684422301796633,
+          "recall_weighted": 0.6881868131868132,
+          "f1_weighted": 0.6839850828431085,
+          "confusion_matrix": [
+            [
+              101,
+              1,
+              0,
+              0,
+              14,
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              165,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              42,
+              6,
+              0,
+              0,
+              11,
+              41
+            ],
+            [
+              0,
+              0,
+              10,
+              18,
+              0,
+              0,
+              4,
+              17
+            ],
+            [
+              20,
+              0,
+              0,
+              0,
+              38,
+              0,
+              0,
+              0
+            ],
+            [
+              1,
+              0,
+              0,
+              0,
+              0,
+              26,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              10,
+              5,
+              0,
+              0,
+              12,
+              29
+            ],
+            [
+              0,
+              0,
+              29,
+              5,
+              0,
+              0,
+              24,
+              99
+            ]
+          ],
+          "labels": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7
+          ],
+          "roc_auc_ovr_weighted": 0.9304058860298755,
+          "headline_metric": "accuracy",
+          "headline_value": 0.6881868131868132,
+          "task_type": "classification",
+          "target_name": "coffee_name",
+          "n_test": 728,
+          "evaluated_at": "2026-06-21T10:58:56.755840+00:00"
+        },
+        "drift_events": 21,
+        "artifacts_ok": 13,
+        "artifacts_miss": 0
+      },
+      {
+        "run_id": "2026-06-21T10:59:23.115004+00:00",
+        "timestamp": "2026-06-21T10:59:26.473994+00:00",
+        "source": "index_1.csv",
+        "status": "success",
+        "duration_seconds": 3.356,
+        "metrics": {
+          "accuracy": 0.6881868131868132,
+          "precision_weighted": 0.684422301796633,
+          "recall_weighted": 0.6881868131868132,
+          "f1_weighted": 0.6839850828431085,
+          "confusion_matrix": [
+            [
+              101,
+              1,
+              0,
+              0,
+              14,
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              165,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              42,
+              6,
+              0,
+              0,
+              11,
+              41
+            ],
+            [
+              0,
+              0,
+              10,
+              18,
+              0,
+              0,
+              4,
+              17
+            ],
+            [
+              20,
+              0,
+              0,
+              0,
+              38,
+              0,
+              0,
+              0
+            ],
+            [
+              1,
+              0,
+              0,
+              0,
+              0,
+              26,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              10,
+              5,
+              0,
+              0,
+              12,
+              29
+            ],
+            [
+              0,
+              0,
+              29,
+              5,
+              0,
+              0,
+              24,
+              99
+            ]
+          ],
+          "labels": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7
+          ],
+          "roc_auc_ovr_weighted": 0.9304058860298755,
+          "headline_metric": "accuracy",
+          "headline_value": 0.6881868131868132,
+          "task_type": "classification",
+          "target_name": "coffee_name",
+          "n_test": 728,
+          "evaluated_at": "2026-06-21T10:59:26.351401+00:00"
+        },
+        "drift_events": 0,
+        "artifacts_ok": 13,
+        "artifacts_miss": 0
+      }
+    ]
+  }
+}
